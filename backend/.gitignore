@@ -1,0 +1,29 @@
+# Python bytecode & cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Environments
+.venv/
+venv/
+env/
+ENV/
+
+# Configuration & Secrets
+.env
+.env.local
+
+# Database files
+*.sqlite3
+*.db
+
+# Temporary uploads and outputs
+uploads/
+generated_charts/
+data/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
