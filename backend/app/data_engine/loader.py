@@ -29,7 +29,13 @@ def load_dataset(file_path: Union[str, Path]) -> Any:
         raise RuntimeError("Pandas is required to load datasets. Please install requirements.txt.") from e
 
     if suffix == ".csv":
-        return pd.read_csv(path)
+        try:
+            return pd.read_csv(path, encoding="utf-8")
+        except UnicodeDecodeError:
+            try:
+                return pd.read_csv(path, encoding="utf-8-sig")
+            except UnicodeDecodeError:
+                return pd.read_csv(path, encoding="latin1")
     elif suffix in (".xlsx", ".xls"):
         return pd.read_excel(path)
     else:
