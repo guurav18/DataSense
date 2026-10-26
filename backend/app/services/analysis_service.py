@@ -1,12 +1,19 @@
-"""Analysis service orchestrating data ingestion, EDA, and agent interaction."""
+"""Analysis service orchestrating data ingestion, EDA, visualization, and agent interaction."""
 
 from pathlib import Path
-from typing import Dict, Any, Optional, Union
+from typing import Dict, Any, Optional, Union, List
 
 from app.data_engine.loader import load_dataset
 from app.data_engine.cleaner import clean_dataset
 from app.data_engine.profiler import profile_dataset
 from app.tools.analysis_tools import calculate_summary_statistics, calculate_correlation_matrix
+from app.tools.visualization_tools import (
+    generate_histogram,
+    generate_correlation_heatmap,
+    generate_scatter_plot,
+    generate_bar_chart,
+    generate_recommended_charts,
+)
 from app.agents.graph import create_analysis_graph
 
 
@@ -40,15 +47,17 @@ class AnalysisService:
         self,
         file_path: Union[str, Path],
         auto_clean: bool = True,
+        generate_charts: bool = True,
     ) -> Dict[str, Any]:
         """Complete ingestion pipeline: loads, cleans, profiles, and analyzes correlations.
 
         Args:
             file_path: Path to the uploaded dataset.
-            auto_clean: Whether to apply automated cleaning (dedup, whitespace strip, column normalization).
+            auto_clean: Whether to apply automated cleaning.
+            generate_charts: Whether to automatically generate starter visualizations.
 
         Returns:
-            Dictionary containing metadata, profile, cleaning report, summary stats, and sample rows.
+            Dictionary containing metadata, profile, cleaning report, summary stats, sample rows, and charts.
         """
         raw_df = load_dataset(file_path)
         clean_report = None
@@ -62,6 +71,10 @@ class AnalysisService:
         summary_stats = calculate_summary_statistics(active_df)
         corr_matrix = calculate_correlation_matrix(active_df)
 
+        charts: List[Dict[str, Any]] = []
+        if generate_charts:
+            charts = generate_recommended_charts(active_df)
+
         return {
             "file_path": str(file_path),
             "file_name": Path(file_path).name,
@@ -70,7 +83,36 @@ class AnalysisService:
             "profile": profile,
             "summary_statistics": summary_stats.get("summary_statistics", {}),
             "correlation_matrix": corr_matrix.get("correlation_matrix", {}),
+            "charts": charts,
         }
+
+    def generate_custom_chart(
+        self,
+        file_path: Union[str, Path],
+        chart_type: str,
+        params: Dict[str, Any],
+    ) -> Optional[Dict[str, Any]]:
+        """Generates a custom visualization on demand for a dataset."""
+        df = load_dataset(file_path)
+        cleaned_df, _ = clean_dataset(df)
+
+        if chart_type == "histogram":
+            column = params.get("column")
+            bins = int(params.get("bins", 20))
+            return generate_histogram(cleaned_df, column, bins=bins)
+        elif chart_type == "heatmap":
+            return generate_correlation_heatmap(cleaned_df)
+        elif chart_type == "scatter":
+            x_col = params.get("x_column")
+            y_col = params.get("y_column")
+            add_trendline = bool(params.get("add_trendline", True))
+            return generate_scatter_plot(cleaned_df, x_col, y_col, add_trendline=add_trendline)
+        elif chart_type == "bar":
+            column = params.get("column")
+            top_n = int(params.get("top_n", 10))
+            return generate_bar_chart(cleaned_df, column, top_n=top_n)
+        else:
+            raise ValueError(f"Unsupported chart type '{chart_type}'. Choose histogram, heatmap, scatter, or bar.")
 
     def run_agent_query(self, user_query: str, dataset_path: Optional[str] = None) -> Dict[str, Any]:
         """Dispatches user prompt to LangGraph agent execution graph."""

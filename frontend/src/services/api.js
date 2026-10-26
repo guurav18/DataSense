@@ -39,16 +39,20 @@ export async function fetchApiStatus() {
  * Upload dataset file (CSV/Excel) to the backend.
  * @param {File} file 
  * @param {boolean} autoClean
+ * @param {boolean} generateCharts
  * @returns {Promise<any>}
  */
-export async function uploadDataset(file, autoClean = true) {
+export async function uploadDataset(file, autoClean = true, generateCharts = true) {
   const formData = new FormData();
   formData.append('file', file);
 
-  const response = await fetch(`${BASE_URL}/api/v1/datasets/upload?auto_clean=${autoClean}`, {
-    method: 'POST',
-    body: formData,
-  });
+  const response = await fetch(
+    `${BASE_URL}/api/v1/datasets/upload?auto_clean=${autoClean}&generate_charts=${generateCharts}`,
+    {
+      method: 'POST',
+      body: formData,
+    }
+  );
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
@@ -59,7 +63,7 @@ export async function uploadDataset(file, autoClean = true) {
 }
 
 /**
- * Fetch pre-configured demo dataset for instant testing.
+ * Fetch pre-configured demo dataset with starter charts for instant testing.
  * @returns {Promise<any>}
  */
 export async function fetchDemoDataset() {
@@ -83,4 +87,41 @@ export async function fetchDatasetPreview(datasetId) {
     throw new Error(errorData.detail || 'Failed to preview dataset');
   }
   return response.json();
+}
+
+/**
+ * Generates custom visualization on demand.
+ * @param {string} datasetId
+ * @param {'histogram' | 'heatmap' | 'scatter' | 'bar'} chartType
+ * @param {Record<string, any>} params
+ * @returns {Promise<any>}
+ */
+export async function generateCustomChart(datasetId, chartType, params = {}) {
+  const response = await fetch(`${BASE_URL}/api/v1/charts/generate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      dataset_id: datasetId,
+      chart_type: chartType,
+      params,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || 'Failed to generate chart');
+  }
+
+  return response.json();
+}
+
+/**
+ * Constructs absolute chart URL.
+ * @param {string} relativeUrl 
+ * @returns {string}
+ */
+export function getChartUrl(relativeUrl) {
+  if (!relativeUrl) return '';
+  if (relativeUrl.startsWith('http')) return relativeUrl;
+  return `${BASE_URL}${relativeUrl}`;
 }

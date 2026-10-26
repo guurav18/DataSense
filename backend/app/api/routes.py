@@ -5,7 +5,8 @@ from pathlib import Path
 from typing import Dict, Any, Optional
 
 import aiofiles
-from fastapi import APIRouter, UploadFile, File, Query, HTTPException
+from fastapi import APIRouter, UploadFile, File, Query, HTTPException, Body
+from fastapi.responses import FileResponse
 
 from app.config import settings
 from app.services.analysis_service import AnalysisService
@@ -20,8 +21,8 @@ def get_api_status() -> Dict[str, Any]:
     return {
         "status": "online",
         "service": "DataSense AI REST API",
-        "version": "0.2.0",
-        "current_stage": "Step 2 Complete — Ingestion, Cleaning & EDA Engine Integrated",
+        "version": "0.3.0",
+        "current_stage": "Step 3 Complete — Visualizations & Dynamic Chart Engine Active",
         "implemented_features": [
             "FastAPI Application Scaffolding & CORS Protection",
             "Root Welcome Endpoint (GET /) & Health Check (GET /health)",
@@ -29,15 +30,13 @@ def get_api_status() -> Dict[str, Any]:
             "Automated Data Cleaning (Whitespace stripping, duplicate removal, column normalization)",
             "Exploratory Data Analysis Profiler (Dtypes, null metrics, stats & JSON preview samples)",
             "Statistical Analysis Tools (Descriptive metrics & Pearson correlation matrix)",
-            "Demo Dataset Generator & Inspection Endpoint (GET /api/v1/datasets/demo)",
+            "Dynamic Matplotlib Visualizations (Distribution histograms, heatmaps, scatter, bar charts)",
+            "Headless Image Serving Engine (GET /api/v1/charts/{filename})",
+            "On-Demand Custom Chart Generation (POST /api/v1/charts/generate)",
+            "Demo Dataset Generator with Auto-Charts (GET /api/v1/datasets/demo)",
             "Swagger / OpenAPI Interactive Documentation (/docs)",
         ],
         "unimplemented_features": [
-            {
-                "name": "Dynamic Matplotlib Visualizations",
-                "description": "Headless generation of distribution plots, correlation heatmaps, and chart exports",
-                "status": "pending_implementation",
-            },
             {
                 "name": "LangGraph Autonomous Agent Orchestrator",
                 "description": "Cyclic state machine for multi-step data reasoning, Python code generation, and result synthesis",
@@ -61,8 +60,9 @@ def get_api_status() -> Dict[str, Any]:
 async def upload_dataset(
     file: UploadFile = File(...),
     auto_clean: bool = Query(True, description="Automatically clean column names, strip whitespace, and drop duplicate rows"),
+    generate_charts: bool = Query(True, description="Automatically generate initial starter charts"),
 ) -> Dict[str, Any]:
-    """Uploads a CSV or Excel dataset, executes automated cleaning, and computes full EDA profiling."""
+    """Uploads a CSV or Excel dataset, executes automated cleaning, computes EDA profiling, and generates starter charts."""
     if not file.filename:
         raise HTTPException(status_code=400, detail="Uploaded file must have a valid filename.")
 
@@ -89,7 +89,11 @@ async def upload_dataset(
 
     # Process dataset through the engine
     try:
-        result = analysis_service.process_uploaded_dataset(stored_path, auto_clean=auto_clean)
+        result = analysis_service.process_uploaded_dataset(
+            stored_path,
+            auto_clean=auto_clean,
+            generate_charts=generate_charts,
+        )
         file_size = stored_path.stat().st_size
     except Exception as e:
         # Clean up temporary file on failure
@@ -110,7 +114,7 @@ async def upload_dataset(
 
 @router.get("/datasets/demo")
 def get_demo_dataset() -> Dict[str, Any]:
-    """Creates or returns a pre-configured sales demonstration dataset for instant testing."""
+    """Creates or returns a pre-configured sales demonstration dataset with auto-generated charts."""
     import pandas as pd
     import numpy as np
 
@@ -133,7 +137,7 @@ def get_demo_dataset() -> Dict[str, Any]:
         demo_df["Total Revenue"] = demo_df["Units Sold"] * demo_df["Unit Price"] * (1 - demo_df["Discount Pct"])
         demo_df.to_csv(demo_path, index=False)
 
-    result = analysis_service.process_uploaded_dataset(demo_path, auto_clean=True)
+    result = analysis_service.process_uploaded_dataset(demo_path, auto_clean=True, generate_charts=True)
     return {
         "status": "success",
         "dataset_id": "demo",
@@ -161,6 +165,51 @@ def preview_dataset(dataset_id: str) -> Dict[str, Any]:
         "dataset_path": str(target_file),
         "data": result,
     }
+
+
+@router.get("/charts/{filename}")
+def get_chart_image(filename: str):
+    """Serves generated Matplotlib visualization images with path traversal protection."""
+    safe_filename = Path(filename).name
+    filepath = settings.CHARTS_DIR / safe_filename
+
+    if not filepath.exists() or not filepath.is_file():
+        raise HTTPException(status_code=404, detail=f"Chart '{safe_filename}' not found.")
+
+    return FileResponse(filepath, media_type="image/png")
+
+
+@router.post("/charts/generate")
+def generate_custom_chart(payload: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
+    """Generates custom on-demand chart (histogram, heatmap, scatter, bar) for an existing dataset."""
+    dataset_id = payload.get("dataset_id")
+    chart_type = payload.get("chart_type")
+    params = payload.get("params", {})
+
+    if not dataset_id or not chart_type:
+        raise HTTPException(status_code=400, detail="Missing required fields: dataset_id and chart_type are required.")
+
+    matching_files = list(settings.UPLOAD_DIR.glob(f"{dataset_id}*"))
+    if not matching_files:
+        raise HTTPException(status_code=404, detail=f"Dataset with ID '{dataset_id}' not found.")
+
+    target_file = matching_files[0]
+    try:
+        chart_info = analysis_service.generate_custom_chart(target_file, chart_type, params)
+        if not chart_info:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Could not generate chart of type '{chart_type}' with specified parameters.",
+            )
+        return {
+            "status": "success",
+            "dataset_id": dataset_id,
+            "chart": chart_info,
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to generate visualization: {str(e)}")
 
 
 @router.post("/agent/query")
