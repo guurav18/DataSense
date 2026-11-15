@@ -3,6 +3,7 @@
 from pathlib import Path
 from typing import Dict, Any, Optional, Union, List
 
+from app.config import settings
 from app.data_engine.loader import load_dataset
 from app.data_engine.cleaner import clean_dataset
 from app.data_engine.profiler import profile_dataset
@@ -119,22 +120,49 @@ class AnalysisService:
         if not self.graph:
             return {
                 "user_query": user_query,
-                "response": (
-                    "LangGraph agent workflow compiled in stub mode. "
-                    "Activate Python virtual environment with full dependencies to execute graph."
-                ),
+                "final_response": "LangGraph agent workflow could not be compiled.",
+                "status": "failed",
             }
+
+        # Resolve dataset path if provided
+        dataset_summary = None
+        resolved_path = None
+        if dataset_path:
+            p = Path(dataset_path)
+            if p.exists() and p.is_file():
+                resolved_path = p
+            elif (settings.UPLOAD_DIR / p.name).exists():
+                resolved_path = settings.UPLOAD_DIR / p.name
+
+        if resolved_path:
+            try:
+                df = load_dataset(resolved_path)
+                cleaned_df, _ = clean_dataset(df)
+                dataset_summary = profile_dataset(cleaned_df)
+            except Exception:
+                pass
 
         initial_state = {
             "user_query": user_query,
-            "dataset_path": dataset_path,
+            "dataset_path": str(resolved_path) if resolved_path else None,
+            "dataset_summary": dataset_summary,
             "messages": [],
             "chart_paths": [],
+            "chart_urls": [],
         }
 
-        # Invocation will be connected in feature integration phase
+        final_state = self.graph.invoke(initial_state)
+
         return {
             "user_query": user_query,
-            "status": "ready",
-            "state_initialized": True,
+            "dataset_path": str(dataset_path) if dataset_path else None,
+            "plan": final_state.get("plan") or [],
+            "generated_code": final_state.get("generated_code") or "",
+            "execution_result": final_state.get("execution_result"),
+            "stdout_output": final_state.get("stdout_output") or "",
+            "chart_paths": final_state.get("chart_paths") or [],
+            "chart_urls": final_state.get("chart_urls") or [],
+            "final_response": final_state.get("final_response") or "",
+            "error": final_state.get("error"),
+            "status": "failed" if final_state.get("error") else "completed",
         }

@@ -76,6 +76,18 @@ export async function fetchDemoDataset() {
 }
 
 /**
+ * Fetch list of all saved datasets.
+ * @returns {Promise<any>}
+ */
+export async function fetchDatasets() {
+  const response = await fetch(`${BASE_URL}/api/v1/datasets`);
+  if (!response.ok) {
+    throw new Error('Failed to retrieve saved datasets');
+  }
+  return response.json();
+}
+
+/**
  * Fetch preview data for an uploaded dataset by ID.
  * @param {string} datasetId 
  * @returns {Promise<any>}
@@ -112,6 +124,46 @@ export async function generateCustomChart(datasetId, chartType, params = {}) {
     throw new Error(errorData.detail || 'Failed to generate chart');
   }
 
+  return response.json();
+}
+
+/**
+ * Dispatches a natural-language query to the autonomous LangGraph agent.
+ * @param {string} query
+ * @param {string} datasetId
+ * @returns {Promise<any>}
+ */
+export async function dispatchAgentQuery(query, datasetId) {
+  const response = await fetch(`${BASE_URL}/api/v1/agent/query`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      query,
+      dataset_id: datasetId,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || 'Agent query execution failed');
+  }
+
+  return response.json();
+}
+
+/**
+ * Retrieves past analysis sessions from database persistence.
+ * @param {string} [datasetId]
+ * @returns {Promise<any>}
+ */
+export async function fetchSessions(datasetId = null) {
+  const url = datasetId
+    ? `${BASE_URL}/api/v1/sessions?dataset_id=${datasetId}`
+    : `${BASE_URL}/api/v1/sessions`;
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error('Failed to retrieve analysis sessions');
+  }
   return response.json();
 }
 
