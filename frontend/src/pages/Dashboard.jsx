@@ -145,14 +145,18 @@ export default function Dashboard() {
 
   const applyDataset = (res) => {
     setDataset(res);
-    setCharts(res.data?.charts || []);
-    const cols = res.data?.profile?.column_names || [];
+    const chartsList = res.data?.charts || res.charts || [];
+    setCharts(chartsList);
+    const profileObj = res.data?.profile || res.profile || {};
+    const cols = profileObj?.column_names || [];
     if (cols.length > 0) {
       setChartCol(cols[0]);
       setChartXCol(cols[0]);
       setChartYCol(cols[1] || cols[0]);
     }
-    loadDatasetSessions(res.dataset_id);
+    if (res.dataset_id) {
+      loadDatasetSessions(res.dataset_id);
+    }
   };
 
   const loadDatasetSessions = async (datasetId) => {
@@ -287,10 +291,11 @@ export default function Dashboard() {
     executeQuery(queryInput);
   };
 
-  const profile = dataset?.data?.profile;
-  const cleaningReport = dataset?.data?.cleaning_report;
-  const columnNames = profile?.column_names || [];
+  const profile = dataset?.data?.profile || dataset?.profile || {};
+  const cleaningReport = dataset?.data?.cleaning_report || dataset?.cleaning_report;
+  const columnNames = profile?.column_names || (profile?.columns_info ? profile.columns_info.map(c => c.name) : []);
   const numericColumns = profile?.columns_info?.filter((c) => c.stats) || [];
+  const previewRows = profile?.sample_rows || dataset?.preview || dataset?.data?.sample_rows || [];
 
   const suggestedPrompts = [
     'What is the total revenue by product?',
@@ -383,7 +388,7 @@ export default function Dashboard() {
               <div className="meta-title-group">
                 <FileSpreadsheet className="text-primary" size={24} />
                 <div>
-                  <h4 className="meta-filename">{dataset.original_name}</h4>
+                  <h4 className="meta-filename">{dataset.original_name || dataset.filename || 'Uploaded Dataset'}</h4>
                   <span className="text-muted text-xs">
                     {dataset.file_size_bytes ? `${(dataset.file_size_bytes / 1024).toFixed(1)} KB • ` : ''}
                     Database Persistent &bull; Active in Memory
@@ -404,20 +409,20 @@ export default function Dashboard() {
             <div className="stats-row">
               <div className="stat-box">
                 <span className="stat-label">Total Rows</span>
-                <span className="stat-val">{profile?.rows?.toLocaleString()}</span>
+                <span className="stat-val">{profile?.rows?.toLocaleString() ?? 0}</span>
               </div>
               <div className="stat-box">
                 <span className="stat-label">Columns</span>
-                <span className="stat-val">{profile?.columns}</span>
+                <span className="stat-val">{profile?.columns ?? columnNames.length ?? 0}</span>
               </div>
               <div className="stat-box">
                 <span className="stat-label">Total Cells</span>
-                <span className="stat-val">{profile?.total_cells?.toLocaleString()}</span>
+                <span className="stat-val">{profile?.total_cells?.toLocaleString() ?? 0}</span>
               </div>
               <div className="stat-box">
                 <span className="stat-label">Missing Values</span>
-                <span className={`stat-val ${profile?.total_nulls > 0 ? 'text-warning' : 'text-success'}`}>
-                  {profile?.total_nulls}
+                <span className={`stat-val ${(profile?.total_nulls ?? 0) > 0 ? 'text-warning' : 'text-success'}`}>
+                  {profile?.total_nulls ?? 0}
                 </span>
               </div>
               <div className="stat-box">
@@ -438,7 +443,7 @@ export default function Dashboard() {
               onClick={() => setActiveTab('preview')}
             >
               <Table size={18} />
-              <span>Data Preview &amp; Schema ({profile?.columns} cols)</span>
+              <span>Data Preview &amp; Schema ({profile?.columns ?? columnNames.length ?? 0} cols)</span>
             </button>
             <button
               className={`studio-tab-btn ${activeTab === 'charts' ? 'active' : ''}`}
@@ -471,7 +476,7 @@ export default function Dashboard() {
                 <div className="pane-header">
                   <div>
                     <h3 className="pane-title">Sample Data Preview</h3>
-                    <p className="text-muted text-xs">First {profile?.sample_rows?.length} records of the dataset</p>
+                    <p className="text-muted text-xs">First {previewRows.length} records of the dataset</p>
                   </div>
                 </div>
 
@@ -486,7 +491,7 @@ export default function Dashboard() {
                       </tr>
                     </thead>
                     <tbody>
-                      {profile?.sample_rows?.map((row, idx) => (
+                      {previewRows.map((row, idx) => (
                         <tr key={idx}>
                           <td className="row-index">{idx + 1}</td>
                           {columnNames.map((col) => (

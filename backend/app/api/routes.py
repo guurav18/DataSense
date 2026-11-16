@@ -125,7 +125,7 @@ async def upload_dataset(
         "file_size_bytes": file_size,
         "dataset_path": str(stored_path),
         "data": result,
-        "preview": result.get("sample_rows"),
+        "preview": result.get("profile", {}).get("sample_rows", []),
         "profile": result.get("profile"),
         "shape": [result.get("profile", {}).get("rows"), result.get("profile", {}).get("columns")],
         "charts": result.get("charts", []),
