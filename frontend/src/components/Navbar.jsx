@@ -1,12 +1,13 @@
 import React from 'react';
+import { LayoutDashboard, Layers, Sparkles } from 'lucide-react';
 
-export default function Navbar({ health }) {
+export default function Navbar({ health, currentTab, onSelectTab }) {
   const isHealthy = health?.status === 'healthy';
 
   return (
     <header className="navbar" id="app-navbar">
       <div className="navbar-container">
-        <div className="navbar-brand">
+        <div className="navbar-brand" onClick={() => onSelectTab && onSelectTab('dashboard')} style={{ cursor: 'pointer' }}>
           <div className="brand-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M3 3v18h18" />
@@ -18,6 +19,25 @@ export default function Navbar({ health }) {
             <span className="brand-tag">Autonomous Agent</span>
           </div>
         </div>
+
+        {onSelectTab && (
+          <nav className="navbar-nav">
+            <button
+              className={`nav-tab-btn ${currentTab === 'dashboard' ? 'active' : ''}`}
+              onClick={() => onSelectTab('dashboard')}
+            >
+              <LayoutDashboard size={16} />
+              <span>Studio Dashboard</span>
+            </button>
+            <button
+              className={`nav-tab-btn ${currentTab === 'overview' ? 'active' : ''}`}
+              onClick={() => onSelectTab('overview')}
+            >
+              <Layers size={16} />
+              <span>Architecture & Roadmap</span>
+            </button>
+          </nav>
+        )}
 
         <div className="navbar-actions">
           <div

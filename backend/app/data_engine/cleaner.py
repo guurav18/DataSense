@@ -7,7 +7,7 @@ def clean_dataset(df: Any, drop_duplicates: bool = True, strip_whitespace: bool 
     """Performs foundational data cleaning on a Pandas DataFrame.
 
     Operations:
-    1. Standardizes column names (stripped, lowercase, spaces replaced with underscores).
+    1. Standardizes column names (stripped, lowercase, spaces replaced with underscores, duplicate names deduplicated).
     2. Strips leading/trailing whitespace from string columns.
     3. Removes exact duplicate rows if requested.
     4. Computes a summary of cleaning operations performed.
@@ -24,11 +24,18 @@ def clean_dataset(df: Any, drop_duplicates: bool = True, strip_whitespace: bool 
     initial_rows = len(cleaned_df)
     initial_cols = len(cleaned_df.columns)
 
-    # 1. Clean column names
-    cleaned_df.columns = [
-        str(col).strip().lower().replace(" ", "_")
-        for col in cleaned_df.columns
-    ]
+    # 1. Clean and deduplicate column names
+    new_cols = []
+    seen = {}
+    for col in cleaned_df.columns:
+        clean_name = str(col).strip().lower().replace(" ", "_").replace("-", "_")
+        if clean_name in seen:
+            seen[clean_name] += 1
+            new_cols.append(f"{clean_name}_{seen[clean_name]}")
+        else:
+            seen[clean_name] = 0
+            new_cols.append(clean_name)
+    cleaned_df.columns = new_cols
 
     # 2. Strip whitespace from string objects
     if strip_whitespace:

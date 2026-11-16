@@ -14,7 +14,9 @@ class AgentState(TypedDict, total=False):
         plan: Steps formulated by the agent to satisfy the query.
         generated_code: Python code synthesized to query pandas or generate charts.
         execution_result: Raw outputs, tables, or numeric results from code execution.
+        stdout_output: Printed terminal output captured during execution.
         chart_paths: File paths to generated Matplotlib charts/visualizations.
+        chart_urls: Web-accessible URLs to generated charts.
         final_response: Natural language answer synthesized for the user.
         error: Any error encountered during data processing or code execution.
     """
@@ -26,6 +28,8 @@ class AgentState(TypedDict, total=False):
     plan: Optional[List[str]]
     generated_code: Optional[str]
     execution_result: Optional[Any]
+    stdout_output: Optional[str]
     chart_paths: List[str]
+    chart_urls: List[str]
     final_response: Optional[str]
     error: Optional[str]
