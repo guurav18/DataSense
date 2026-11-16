@@ -1,10 +1,30 @@
 import React, { useState } from 'react';
 import Navbar from './components/Navbar';
+import DatasetUploader from './components/DatasetUploader';
+import FrontpageChatbot from './components/FrontpageChatbot';
 import { useHealthCheck } from './hooks/useHealthCheck';
+import { uploadDataset } from './services/api';
 
 export default function App() {
   const { health, loading, refetch } = useHealthCheck(15000);
-  const [selectedTab, setSelectedTab] = useState('overview');
+  const [activeDataset, setActiveDataset] = useState(null);
+  const [sampleLoading, setSampleLoading] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+
+  const handleLoadSample = async () => {
+    try {
+      setSampleLoading(true);
+      const res = await fetch('/sample_sales_dataset.csv');
+      const blob = await res.blob();
+      const sampleFile = new File([blob], 'sample_sales_dataset.csv', { type: 'text/csv' });
+      const data = await uploadDataset(sampleFile);
+      setActiveDataset(data);
+    } catch (err) {
+      console.error('Failed to load sample dataset', err);
+    } finally {
+      setSampleLoading(false);
+    }
+  };
 
   const capabilities = [
     {
@@ -111,32 +131,41 @@ export default function App() {
           </p>
 
           <div className="hero-cta-group">
+            <button
+              onClick={handleLoadSample}
+              className="btn btn-primary"
+              id="btn-try-sample"
+              disabled={sampleLoading}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="btn-icon">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+                <line x1="12" y1="18" x2="12" y2="12" />
+                <line x1="9" y1="15" x2="15" y2="15" />
+              </svg>
+              {sampleLoading ? 'Loading Sample...' : 'Quick Start: Load Sample Data'}
+            </button>
+
+            <button
+              onClick={() => setIsChatOpen(true)}
+              className="btn btn-secondary"
+              id="btn-chat-jump"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="btn-icon">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+              </svg>
+              Chat With AI Agent
+            </button>
+
             <a
               href="http://localhost:8000/docs"
               target="_blank"
               rel="noreferrer"
-              className="btn btn-primary"
+              className="btn btn-ghost"
               id="btn-api-docs"
             >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="btn-icon">
-                <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
-                <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
-              </svg>
-              Explore FastAPI Swagger Docs
+              FastAPI Swagger Docs
             </a>
-
-            <button
-              onClick={refetch}
-              className="btn btn-secondary"
-              id="btn-check-backend"
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="btn-icon">
-                <polyline points="23 4 23 10 17 10" />
-                <polyline points="1 20 1 14 7 14" />
-                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
-              </svg>
-              Verify Backend Health
-            </button>
           </div>
         </section>
 
@@ -177,6 +206,13 @@ export default function App() {
             </div>
           </div>
         </section>
+
+        {/* Interactive Dataset Ingestion, EDA & Agent Workspace */}
+        <DatasetUploader
+          dataset={activeDataset}
+          onDatasetChange={setActiveDataset}
+          onLoadSample={handleLoadSample}
+        />
 
         {/* Architecture Grid */}
         <section className="capabilities-section" id="capabilities">
@@ -253,6 +289,14 @@ export default function App() {
       <footer className="footer">
         <p>DataSense AI &bull; Autonomous Data Analysis Agent &bull; Initial Scaffold Completed</p>
       </footer>
+
+      {/* Floating AI Chatbot Icon Widget in Footer side */}
+      <FrontpageChatbot
+        dataset={activeDataset}
+        onLoadSample={handleLoadSample}
+        isOpen={isChatOpen}
+        onToggle={setIsChatOpen}
+      />
     </div>
   );
 }

@@ -2,6 +2,7 @@
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from typing import Dict, Any
 
 from app.config import settings
@@ -23,6 +24,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Mount static folder for generated charts and visual artifacts
+app.mount("/charts", StaticFiles(directory=str(settings.CHARTS_DIR)), name="charts")
 
 # Include API router
 app.include_router(api_router)

@@ -1,0 +1,16 @@
+order_id,date,region,category,sales,profit,units_sold,discount,customer_rating
+1001,2026-01-15,North,Technology,1250.50,340.20,5,0.05,4.8
+1002,2026-01-16,South,Furniture,850.00,120.50,3,0.10,4.2
+1003,2026-01-17,East,Office Supplies,320.75,85.00,12,0.00,4.5
+1004,2026-01-18,West,Technology,2100.00,620.00,4,0.15,4.9
+1005,2026-01-19,North,Furniture,1420.00,-45.50,2,0.20,3.8
+1006,2026-01-20,East,Technology,980.00,210.00,6,0.05,4.6
+1007,2026-01-21,South,Office Supplies,150.25,42.10,8,0.00,4.7
+1008,2026-01-22,West,Furniture,1750.00,310.80,5,0.10,4.1
+1009,2026-01-23,North,Office Supplies,410.50,110.25,15,0.05,4.4
+1010,2026-01-24,South,Technology,3100.00,890.00,8,0.12,5.0
+1011,2026-01-25,East,Furniture,620.00,95.00,2,0.00,4.0
+1012,2026-01-26,West,Technology,1850.00,480.00,3,0.08,4.7
+1013,2026-01-27,North,Furniture,950.50,140.00,4,0.10,3.9
+1014,2026-01-28,South,Office Supplies,275.00,72.50,9,0.00,4.6
+1015,2026-01-29,East,Technology,2450.00,710.00,7,0.10,4.9
